@@ -12,14 +12,20 @@ var app = express();
 // Use environment defined port or 3000
 var port = process.env.PORT || 3000;
 
-// Connect to a MongoDB --> Uncomment this once you have a connection string!!
-//mongoose.connect(process.env.MONGODB_URI).catch(function (err) { console.error('MongoDB connection error:', err.message); });
+// Connect to MongoDB Atlas (or a local replica set for development).
+if (process.env.MONGODB_URI) {
+    var ready = mongoose.connect(process.env.MONGODB_URI);
+} else {
+    console.error('MONGODB_URI is required');
+    process.exit(1);
+}
 
 // Allow CORS so that backend and frontend could be put on different servers
 var allowCrossDomain = function (req, res, next) {
     res.header("Access-Control-Allow-Origin", "*");
     res.header("Access-Control-Allow-Headers", "X-Requested-With, X-HTTP-Method-Override, Content-Type, Accept");
     res.header("Access-Control-Allow-Methods", "POST, GET, PUT, DELETE, OPTIONS");
+    if (req.method === 'OPTIONS') return res.sendStatus(204);
     next();
 };
 app.use(allowCrossDomain);
@@ -32,5 +38,11 @@ app.use(express.json());
 require('./routes')(app, router);
 
 // Start the server
-app.listen(port);
-console.log('Server running on port ' + port);
+ready.then(async function () {
+    await Promise.all([require('./models/user').init(), require('./models/task').init()]);
+    app.listen(port);
+    console.log('Server running on port ' + port);
+}).catch(function () {
+    console.error('MongoDB initialization failed');
+    process.exit(1);
+});
