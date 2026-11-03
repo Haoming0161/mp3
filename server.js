@@ -39,10 +39,12 @@ require('./routes')(app, router);
 
 // Start the server
 ready.then(async function () {
+    console.log('MongoDB connected; initializing indexes');
     await Promise.all([require('./models/user').init(), require('./models/task').init()]);
     app.listen(port);
     console.log('Server running on port ' + port);
-}).catch(function () {
+}).catch(function (error) {
     console.error('MongoDB initialization failed');
+    console.error(require('./lib/database-error')(error));
     process.exit(1);
 });
