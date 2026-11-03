@@ -4,8 +4,13 @@ const base = process.env.TEST_API_URL;
 // Use an isolated test database: these checks create and delete records.
 test('task API workflow', { skip: !base }, async () => {
     const users = [], tasks = [];
-    async function request(path, method = 'GET', body, status = 200) {
+    async function request(path, method = 'GET', body, status = method === 'DELETE' ? 204 : 200) {
         const response = await fetch(`${base}/api${path}`, { method, headers: { 'Content-Type': 'application/json' }, body: body === undefined ? undefined : JSON.stringify(body) });
+        if (status === 204) {
+            assert.equal(response.status, 204);
+            assert.equal(await response.text(), '');
+            return;
+        }
         const data = await response.json();
         assert.equal(response.status, status, JSON.stringify(data));
         assert.equal(typeof data.message, 'string');

@@ -68,9 +68,10 @@ function mutation(fn) {
         const run = queue.then(async () => {
             let status = 200;
             let payload;
-            const response = { status(code) { status = code; return this; }, json(body) { payload = body; } };
+            const response = { status(code) { status = code; return this; }, json(body) { payload = body; }, end() {} };
             await mongoose.connection.transaction(() => fn(req, response));
-            res.status(status).json(payload);
+            if (status === 204) res.status(204).end();
+            else res.status(status).json(payload);
         });
         queue = run.catch(() => {});
         run.catch(next);
@@ -131,7 +132,7 @@ module.exports = function (app, router) {
             if (isUser) await Task.updateMany({ assignedUser: key }, { $set: { assignedUser: '', assignedUserName: 'unassigned' } });
             else await User.updateMany({ pendingTasks: key }, { $pull: { pendingTasks: key } });
             await doc.deleteOne();
-            res.json({ message: 'Deleted', data: {} });
+            res.status(204).end();
         }));
     }
     app.use('/api', router);
